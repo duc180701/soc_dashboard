@@ -1,0 +1,23 @@
+server:
+  port: 1807
+  error:
+    include-message: never
+app:
+  user-store:
+    path: ${USER_STORE_PATH:./data/users.json}
+logging:
+  level:
+    vn.sentinel.soc.service.QRadarService: INFO
+qradar:
+  base-url: ${QRADAR_BASE_URL}
+  token: ${QRADAR_TOKEN}
+  version: ${QRADAR_API_VERSION:24.0}
+  search-timeout-seconds: ${QRADAR_SEARCH_TIMEOUT_SECONDS:60}
+spring:
+  config:
+    import: classpath:qradar-queries.yml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

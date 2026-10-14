@@ -1,0 +1,64 @@
+qradar:
+  queries:
+    events: >-
+      SELECT COUNT(*) AS total_events FROM events START '{{from}}' STOP '{{to}}'
+    alerts: >-
+      SELECT SUM(eventCount) AS total_alerts FROM events WHERE severity IS NOT NULL START '{{from}}' STOP '{{to}}'
+    blocked-alerts: >-
+      SELECT SUM(eventCount) AS blocked_alerts FROM events
+      WHERE severity >= 4 AND UTF8(payload) ILIKE '%blocked%' START '{{from}}' STOP '{{to}}'
+    protected-systems: >-
+      SELECT DISTINCTCOUNT(destinationip) AS alert_destination_ips FROM events
+      WHERE severity >= 4 AND destinationip IS NOT NULL START '{{from}}' STOP '{{to}}'
+    active-solutions: >-
+      SELECT DISTINCTCOUNT(logsourceid) AS alert_log_sources FROM events
+      WHERE severity >= 4 AND logsourceid IS NOT NULL START '{{from}}' STOP '{{to}}'
+    severity-high: >-
+      SELECT SUM(eventCount) AS severity_high FROM events WHERE severity >= 7 START '{{from}}' STOP '{{to}}'
+    severity-medium: >-
+      SELECT SUM(eventCount) AS severity_medium FROM events WHERE severity >= 4 AND severity < 7 START '{{from}}' STOP '{{to}}'
+    severity-low: >-
+      SELECT SUM(eventCount) AS severity_low FROM events WHERE severity < 4 START '{{from}}' STOP '{{to}}'
+    event-series: >-
+      SELECT LONG(starttime/{{bucketMillis}}) AS bucket, COUNT(*) AS events
+      FROM events GROUP BY bucket ORDER BY bucket ASC START '{{from}}' STOP '{{to}}'
+    solution-breakdown: >-
+      SELECT LOGSOURCENAME(logsourceid) AS solution, SUM(eventCount) AS alerts FROM events
+      WHERE severity IS NOT NULL GROUP BY logsourceid ORDER BY alerts DESC START '{{from}}' STOP '{{to}}'
+    top-sources: >-
+      SELECT sourceip AS source_ip, SUM(eventCount) AS alerts FROM events
+      WHERE severity IS NOT NULL AND sourceip IS NOT NULL
+      GROUP BY sourceip ORDER BY alerts DESC LIMIT 10 START '{{from}}' STOP '{{to}}'
+    attack-types: >-
+      SELECT CATEGORYNAME(category) AS attack_type, SUM(eventCount) AS events FROM events
+      WHERE severity IS NOT NULL GROUP BY attack_type ORDER BY events DESC LIMIT 10 START '{{from}}' STOP '{{to}}'
+    country-distribution: >-
+      SELECT GEO::LOOKUP_TEXT(sourceip, 'country_name') AS country,
+      GEO::LOOKUP_TEXT(sourceip, 'country_iso_code') AS country_code,
+      SUM(eventCount) AS events FROM events
+      WHERE severity IS NOT NULL AND sourceip IS NOT NULL
+      AND GEO::LOOKUP_TEXT(sourceip, 'country_name') IS NOT NULL
+      GROUP BY country, country_code ORDER BY events DESC START '{{from}}' STOP '{{to}}'
+    vietnam-provinces: >-
+      SELECT GEO::LOOKUP(sourceip, 'subdivisions') AS subdivisions, SUM(eventCount) AS events
+      FROM events WHERE severity IS NOT NULL AND sourceip IS NOT NULL
+      AND GEO::LOOKUP_TEXT(sourceip, 'country_iso_code') = 'VN'
+      GROUP BY subdivisions ORDER BY events DESC START '{{from}}' STOP '{{to}}'
+    recent-flows: >-
+      SELECT starttime, sourceip AS source_ip, destinationip AS destination_ip,
+      CATEGORYNAME(category) AS attack_type, severity, eventCount AS event_count,
+      UTF8(payload) AS event_payload,
+      GEO::LOOKUP_TEXT(sourceip, 'country_name') AS source_country,
+      GEO::LOOKUP_TEXT(sourceip, 'latitude') AS source_latitude,
+      GEO::LOOKUP_TEXT(sourceip, 'longitude') AS source_longitude,
+      GEO::LOOKUP_TEXT(destinationip, 'country_name') AS destination_country,
+      GEO::LOOKUP_TEXT(destinationip, 'latitude') AS destination_latitude,
+      GEO::LOOKUP_TEXT(destinationip, 'longitude') AS destination_longitude
+      FROM events WHERE severity IS NOT NULL AND sourceip IS NOT NULL AND destinationip IS NOT NULL
+      ORDER BY starttime DESC LIMIT 50 START '{{from}}' STOP '{{to}}'
+    all-flows: >-
+      SELECT starttime, sourceip AS source_ip, destinationip AS destination_ip,
+      CATEGORYNAME(category) AS attack_type, severity, eventCount AS event_count,
+      UTF8(payload) AS event_payload
+      FROM events WHERE severity IS NOT NULL AND sourceip IS NOT NULL AND destinationip IS NOT NULL
+      ORDER BY starttime DESC START '{{from}}' STOP '{{to}}'
